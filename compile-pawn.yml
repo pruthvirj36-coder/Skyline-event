@@ -1,0 +1,37 @@
+name: Compile Pawn
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "**.pwn"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install 32-bit libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libc6-i386
+
+      - name: Download compiler and includes
+        run: |
+          wget -q https://github.com/pawn-lang/compiler/releases/download/v3.10.10/pawnc-3.10.10-linux.tar.gz
+          mkdir pawnc
+          tar xzf pawnc-3.10.10-linux.tar.gz -C pawnc
+          git clone --depth 1 https://github.com/pawn-lang/samp-stdlib.git
+
+      - name: Compile halloween.pwn
+        run: |
+          PAWNCC=$(find pawnc -name pawncc -type f | head -n 1)
+          LIBDIR=$(dirname "$(find pawnc -name 'libpawnc.so' | head -n 1)")
+          export LD_LIBRARY_PATH="$LIBDIR"
+          "$PAWNCC" halloween.pwn -isamp-stdlib -ohalloween.amx '-;+' '-(+' -d3
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: halloween-amx
+          path: halloween.amx
